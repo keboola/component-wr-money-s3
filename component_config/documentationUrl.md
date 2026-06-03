@@ -1,0 +1,1 @@
+https://github.com/keboola/component-wr-money-s3/blob/master/README.md
