@@ -19,7 +19,6 @@ class WriterConfiguration(BaseModel):
     base_url: str
     client_id: str
     client_secret: str = Field(alias="#client_secret")
-    scope: str = "s3api"
     agenda_id: str | None = None  # GUID of the target Money S3 agenda (company DB); required for writes
 
     # row-level

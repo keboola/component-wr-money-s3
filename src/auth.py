@@ -3,14 +3,17 @@ import time
 import requests
 from keboola.component.exceptions import UserException
 
+# Money S3's OAuth2 client-credentials flow only issues tokens for this fixed scope; it is not a
+# user-tunable setting, so it lives here as a constant rather than in the configuration.
+OAUTH_SCOPE = "s3api"
+
 
 class TokenManager:
-    def __init__(self, base_url, app_id, client_id, client_secret, scope="s3api", session=None):
+    def __init__(self, base_url, app_id, client_id, client_secret, session=None):
         self.base_url = base_url.rstrip("/")
         self.app_id = app_id
         self.client_id = client_id
         self.client_secret = client_secret
-        self.scope = scope
         self.session = session or requests.Session()
         self._token = None
         self._expires_at = 0.0
@@ -27,7 +30,7 @@ class TokenManager:
                     "grant_type": "client_credentials",
                     "client_id": self.client_id,
                     "client_secret": self.client_secret,
-                    "scope": self.scope,
+                    "scope": OAUTH_SCOPE,
                 },
                 timeout=30,
             )

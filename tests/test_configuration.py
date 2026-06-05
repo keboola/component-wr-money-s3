@@ -20,7 +20,6 @@ def _base(**over):
 def test_parses_minimal_and_aliases_secret():
     cfg = WriterConfiguration(**_base())
     assert cfg.client_secret == "S"
-    assert cfg.scope == "s3api"  # default
     assert cfg.write_mode == "create"  # default
     assert cfg.key_field == "guid"  # default
     assert isinstance(cfg.field_mapping[0], FieldMapping)

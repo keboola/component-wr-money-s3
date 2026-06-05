@@ -2,7 +2,6 @@
   "action": "run",
   "parameters": {
     "base_url": "http://localhost:28085",
-    "scope": "s3api",
     "client_id": "DUMMY_CLIENT_ID",
     "#client_secret": "DUMMY_SECRET",
     "agenda_id": "70efd056-d613-46f0-97bd-949c9d0989da",

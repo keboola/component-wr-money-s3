@@ -47,7 +47,7 @@ class Component(ComponentBase):
                 "Money S3 'app_id' is not set in the component image parameters. It is configured "
                 "at the component level, not in this configuration; contact your Keboola administrator."
             )
-        token_mgr = TokenManager(cfg.base_url, app_id, cfg.client_id, cfg.client_secret, cfg.scope)
+        token_mgr = TokenManager(cfg.base_url, app_id, cfg.client_id, cfg.client_secret)
         return MoneyS3Client(cfg.base_url, token_mgr, agenda_id=cfg.agenda_id)
 
     def _read_rows(self, destination: str) -> list[dict]:

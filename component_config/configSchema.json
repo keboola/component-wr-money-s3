@@ -24,12 +24,6 @@
       "format": "password",
       "propertyOrder": 4
     },
-    "scope": {
-      "type": "string",
-      "title": "OAuth Scope",
-      "default": "s3api",
-      "propertyOrder": 5
-    },
     "agenda_id": {
       "type": "string",
       "title": "Agenda",
