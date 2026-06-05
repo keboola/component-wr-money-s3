@@ -1,0 +1,125 @@
+[
+  {
+    "name": "01_test_connection",
+    "description": "Validate Money S3 API connection (token fetch + GraphQL introspection).",
+    "config": {
+      "action": "test_connection",
+      "parameters": {
+        "base_url": "http://localhost:28085",
+        "scope": "s3api",
+        "app_id": "DUMMY_APP_ID",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET"
+      }
+    }
+  },
+  {
+    "name": "02_list_endpoints",
+    "description": "List writable Money S3 endpoints for the UI dropdown.",
+    "config": {
+      "action": "list_endpoints",
+      "parameters": {
+        "base_url": "http://localhost:28085",
+        "scope": "s3api",
+        "app_id": "DUMMY_APP_ID",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET"
+      }
+    }
+  },
+  {
+    "name": "03_load_field_mapping",
+    "description": "Auto-map input columns to the Company endpoint's introspected fields.",
+    "config": {
+      "action": "load_field_mapping",
+      "parameters": {
+        "base_url": "http://localhost:28085",
+        "scope": "s3api",
+        "app_id": "DUMMY_APP_ID",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET",
+        "endpoint": "Company"
+      },
+      "storage": {
+        "input": {
+          "tables": [
+            {"destination": "companies.csv", "columns": ["business_name", "email", "identification_number"]}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "04_create_company",
+    "description": "Create a Company (address-book) record in Money S3 via createCompany (real write).",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "base_url": "http://localhost:28085",
+        "scope": "s3api",
+        "app_id": "DUMMY_APP_ID",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "70efd056-d613-46f0-97bd-949c9d0989da",
+        "endpoint": "Company",
+        "write_mode": "create",
+        "poll_timeout_s": 0,
+        "continue_on_error": true,
+        "field_mapping": [
+          {"source_column": "business_name", "destination_field": "businessAddress.name"},
+          {"source_column": "email", "destination_field": "email"},
+          {"source_column": "identification_number", "destination_field": "identificationNumber"}
+        ]
+      },
+      "storage": {
+        "input": {
+          "tables": [
+            {"destination": "companies.csv"}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "05_run_missing_endpoint",
+    "description": "Run without an endpoint selected -> fail with exit code 1 (no HTTP).",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "base_url": "http://localhost:28085",
+        "scope": "s3api",
+        "app_id": "DUMMY_APP_ID",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET"
+      }
+    }
+  },
+  {
+    "name": "06_load_field_mapping_missing_endpoint",
+    "description": "load_field_mapping without an endpoint -> fail with exit code 1 (no HTTP).",
+    "config": {
+      "action": "load_field_mapping",
+      "parameters": {
+        "base_url": "http://localhost:28085",
+        "scope": "s3api",
+        "app_id": "DUMMY_APP_ID",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET"
+      }
+    }
+  },
+  {
+    "name": "07_list_agendas",
+    "description": "List Money S3 agendas (company databases) for the agenda dropdown.",
+    "config": {
+      "action": "list_agendas",
+      "parameters": {
+        "base_url": "http://localhost:28085",
+        "scope": "s3api",
+        "app_id": "DUMMY_APP_ID",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET"
+      }
+    }
+  }
+]

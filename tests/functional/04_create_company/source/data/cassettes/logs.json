@@ -1,0 +1,12 @@
+{
+  "exit_code": null,
+  "stderr": "",
+  "logs": [
+    {
+      "level": "INFO",
+      "logger": "root",
+      "message": "Submitted 1 record(s) to Money S3 endpoint 'Company'; 0 failed.",
+      "timestamp": "2026-06-04T12:00:00.000Z"
+    }
+  ]
+}

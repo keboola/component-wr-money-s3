@@ -1,0 +1,27 @@
+{
+  "action": "load_field_mapping",
+  "parameters": {
+    "base_url": "http://localhost:28085",
+    "scope": "s3api",
+    "client_id": "DUMMY_CLIENT_ID",
+    "#client_secret": "DUMMY_SECRET",
+    "endpoint": "Company"
+  },
+  "storage": {
+    "input": {
+      "tables": [
+        {
+          "destination": "companies.csv",
+          "columns": [
+            "business_name",
+            "email",
+            "identification_number"
+          ]
+        }
+      ]
+    }
+  },
+  "image_parameters": {
+    "app_id": "DUMMY_APP_ID"
+  }
+}
