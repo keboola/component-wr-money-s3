@@ -29,8 +29,7 @@ def test_test_connection_ok(tmp_path, monkeypatch):
     fake.list_create_endpoints.return_value = [{"value": "Company", "label": "Company"}]
     comp = Component()
     monkeypatch.setattr(comp, "_build_client", lambda cfg: fake)
-    res = comp.test_connection()
-    assert json.loads(str(res))["status"] == "success"
+    assert comp.test_connection() is None
 
 
 def test_test_connection_failure_raises(tmp_path, monkeypatch):

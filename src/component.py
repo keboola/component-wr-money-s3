@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
-from keboola.component.sync_actions import MessageType, SelectElement, ValidationResult
+from keboola.component.sync_actions import SelectElement
 
 from auth import TokenManager
 from client import MoneyS3Client
@@ -108,11 +108,25 @@ class Component(ComponentBase):
 
     @staticmethod
     def _line_item_field(header_fields):
-        """Return (field_name, element_input_type) for the document's line-item array, or (None, None)."""
-        for f in header_fields:
-            if f["is_list"] and f["type"] and f["type"].endswith("Input"):
-                return f["field_name"], f["type"]
-        return None, None
+        """Return (field_name, element_input_type) for the document's line-item array, or (None, None).
+
+        A document input type can expose several list-of-*Input fields (e.g. IssuedInvoiceInput lists
+        vatRateSummary, paymentMeans, ... before items). Prefer the conventional line-item collection:
+        a field named "items", then any whose element type ends in "ItemInput", before falling back to
+        the first list-of-*Input.
+        """
+        lists = [
+            (f["field_name"], f["type"])
+            for f in header_fields
+            if f["is_list"] and f["type"] and f["type"].endswith("Input")
+        ]
+        for name, typ in lists:
+            if name == "items":
+                return name, typ
+        for name, typ in lists:
+            if typ.endswith("ItemInput"):
+                return name, typ
+        return lists[0] if lists else (None, None)
 
     def _run_document(self, client, cfg, mutation_name, arg_name, input_type, header_fields, header_types):
         if not cfg.lines_join_key:
@@ -190,12 +204,13 @@ class Component(ComponentBase):
             w.writerows(results)
         self.write_manifest(out)
 
-    @sync_action("test_connection")
-    def test_connection(self) -> ValidationResult:
+    @sync_action("testConnection")
+    def test_connection(self) -> None:
+        # The test-connection widget only needs {"status": "success"} (emitted by the platform when
+        # this returns nothing) or a non-zero exit on failure — no message/ValidationResult.
         cfg = WriterConfiguration(**self.configuration.parameters)
         client = self._build_client(cfg)
-        client.list_create_endpoints()  # forces token + a GraphQL round-trip
-        return ValidationResult("Connection successful.", MessageType.SUCCESS)
+        client.list_create_endpoints()  # forces token + a GraphQL round-trip; raises on failure
 
     @sync_action("list_endpoints")
     def list_endpoints(self) -> list[SelectElement]:

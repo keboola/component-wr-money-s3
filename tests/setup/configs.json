@@ -3,7 +3,7 @@
     "name": "01_test_connection",
     "description": "Validate Money S3 API connection (token fetch + GraphQL introspection).",
     "config": {
-      "action": "test_connection",
+      "action": "testConnection",
       "parameters": {
         "base_url": "http://localhost:28085",
         "scope": "s3api",

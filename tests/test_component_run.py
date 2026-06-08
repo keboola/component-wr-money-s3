@@ -251,6 +251,48 @@ def test_run_document_builds_items(tmp_path, monkeypatch):
     assert payload["items"] == [{"description": "Widget"}, {"description": "Gadget"}]
 
 
+def test_document_picks_items_over_other_lists(tmp_path, monkeypatch):
+    # IssuedInvoiceInput exposes several list-of-*Input fields (vatRateSummary, ...) BEFORE `items`;
+    # line rows must land in `items`, not the first list-of-*Input encountered.
+    params = {
+        "base_url": "http://h",
+        "app_id": "A",
+        "client_id": "C",
+        "#client_secret": "S",
+        "agenda_id": "AG-1",
+        "endpoint": "IssuedInvoice",
+        "field_mapping": [{"source_column": "var_sym", "destination_field": "variableSymbol"}],
+        "lines_table": "lines.csv",
+        "lines_join_key": "doc_no",
+        "lines_field_mapping": [{"source_column": "desc", "destination_field": "description"}],
+    }
+    data = _make_doc_datadir(
+        tmp_path,
+        params,
+        [{"doc_no": "F1", "var_sym": "123"}],
+        [{"doc_no": "F1", "desc": "Widget"}, {"doc_no": "F1", "desc": "Gadget"}],
+    )
+    monkeypatch.setenv("KBC_DATADIR", str(data))
+    fake = MagicMock()
+    fake.resolve_mutation.return_value = ("createIssuedInvoice", "issuedInvoice", "IssuedInvoiceInput!")
+    fake.get_input_fields.side_effect = [
+        [
+            {"field_name": "vatRateSummary", "type": "VatRateSummaryInput", "is_list": True},
+            {"field_name": "variableSymbol", "type": "String", "is_list": False},
+            {"field_name": "items", "type": "IssuedInvoiceItemInput", "is_list": True},
+        ],  # header type: a list-of-*Input precedes items
+        [{"field_name": "description", "type": "String", "is_list": False}],  # line element type
+    ]
+    fake.submit.return_value = "G1"
+    fake.wait_for_import.return_value = ("OK", "")
+    comp = Component()
+    monkeypatch.setattr(comp, "_build_client", lambda c: fake)
+    comp.run()
+    payload = fake.submit.call_args[0][3]
+    assert payload["items"] == [{"description": "Widget"}, {"description": "Gadget"}]
+    assert "vatRateSummary" not in payload
+
+
 def test_document_missing_line_item_field_raises(tmp_path, monkeypatch):
     params = {
         "base_url": "http://h",
