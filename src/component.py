@@ -251,7 +251,9 @@ class Component(ComponentBase):
             "data": {
                 "field_mapping": field_mapping,
                 "_metadata_": {
-                    "api_fields": [{"field_name": f["field_name"], "label": f["label"]} for f in api_fields]
+                    # label == field_name on purpose: the row schema shows {{item.label}} as the dropdown
+                    # title, so surface the real API field name (e.g. identificationNumber), not an alias.
+                    "api_fields": [{"field_name": f["field_name"], "label": f["field_name"]} for f in api_fields]
                 },
             },
         }

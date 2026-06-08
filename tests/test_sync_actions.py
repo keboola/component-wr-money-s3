@@ -104,3 +104,4 @@ def test_load_field_mapping_fuzzy_fills_and_preserves(tmp_path, monkeypatch):
     assert fm["business_name"] == "businessName"  # fuzzy-matched new column (normalized exact match)
     assert fm["zzz_unrelated"] == ""  # no confident match -> left blank for manual mapping
     assert res["data"]["_metadata_"]["api_fields"][0]["field_name"] == "businessName"
+    assert res["data"]["_metadata_"]["api_fields"][0]["label"] == "businessName"  # label = raw field name
