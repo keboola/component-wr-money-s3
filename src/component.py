@@ -188,12 +188,13 @@ class Component(ComponentBase):
         return {**base, "import_guid": guid, "state": state or "UNKNOWN", "state_info": info or ""}
 
     def _write_results(self, results: list[dict]):
-        # Append-only audit log: every run's attempts accumulate (write_always keeps them even on a
-        # failed job). No primary key -- creates are not idempotent (each run yields fresh GUIDs) and
-        # failed-before-submit rows have no GUID, so upsert-by-GUID would be unsound and collide.
+        # Audit log, upserted on (import_guid, row_index): successful rows accumulate across runs
+        # (each run yields fresh GUIDs), while failed-before-submit rows (empty import_guid) dedupe
+        # by row_index. write_always keeps the log even on a failed job.
         out = self.create_out_table_definition(
             "write_log.csv",
             schema=RESULT_COLUMNS,
+            primary_key=["import_guid", "row_index"],
             incremental=True,
             write_always=True,
             has_header=True,
