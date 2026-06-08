@@ -1,0 +1,8 @@
+{
+  "_metadata": {"freeze_time": "2026-06-08T14:03:02", "keboola_vcr_version": "0.5.0", "recorded_at": "2026-06-08T12:03:05.681963+00:00"},
+  "interactions": [
+    {"request": {"body": "grant_type=client_credentials&client_id=REDACTED&client_secret=REDACTED&scope=s3api", "headers": {"Accept": ["*/*"], "Content-Length": ["103"], "Content-Type": ["application/x-www-form-urlencoded"]}, "method": "POST", "uri": "https://kbc-test.api.moneys3.eu/connect/token?AppId=REDACTED"}, "response": {"body": {"string": "{\"access_token\": \"REDACTED\", \"expires_in\": 3600, \"token_type\": \"Bearer\", \"scope\": \"s3api\"}"}, "headers": {"Content-Type": ["application/json; charset=UTF-8"], "content-length": ["3650"]}, "status": {"code": 200, "message": "OK"}}},
+    {"request": {"body": "{\"query\": \"{ agendas { items { guid displayName } } }\", \"variables\": {}}", "headers": {"Accept": ["*/*"], "Content-Length": ["72"], "Content-Type": ["application/json"]}, "method": "POST", "uri": "https://kbc-test.api.moneys3.eu/graphql/"}, "response": {"body": {"string": "{\"data\":{\"agendas\":{\"items\":[{\"guid\":\"70efd056-d613-46f0-97bd-949c9d0989da\",\"displayName\":\"J. Bohat\u00fd - SPORT (demo da\u0148ov\u00e1 evidence)\"},{\"guid\":\"4ffa7191-f86f-41ab-b687-610fa1fc2dcb\",\"displayName\":\"SPORT, s.r.o. (demo podvojn\u00e9 \u00fa\u010detnictv\u00ed, sklady B)\"}]}}}"}, "headers": {"Content-Type": ["application/graphql-response+json; charset=utf-8"]}, "status": {"code": 200, "message": "OK"}}}
+  ],
+  "version": 1
+}

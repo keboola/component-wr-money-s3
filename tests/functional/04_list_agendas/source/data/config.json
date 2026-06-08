@@ -1,0 +1,12 @@
+{
+  "action": "list_agendas",
+  "parameters": {
+    "base_url": "https://kbc-test.api.moneys3.eu",
+    "client_id": "DUMMY_CLIENT_ID",
+    "#client_secret": "DUMMY_SECRET",
+    "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb"
+  },
+  "image_parameters": {
+    "app_id": "DUMMY_APP_ID"
+  }
+}

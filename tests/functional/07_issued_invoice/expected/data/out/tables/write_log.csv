@@ -1,0 +1,3 @@
+row_index,endpoint,write_mode,key_value,submitted_at,import_guid,state,state_info
+0,IssuedInvoice,create,,2026-06-08T17:32:55+00:00,e401698a-3bcf-4609-b613-849bac24576c,UNPROCESSED,
+1,IssuedInvoice,create,,2026-06-08T17:32:55+00:00,e306efe1-06d6-42bf-91eb-f7c4d454977b,UNPROCESSED,

@@ -1,0 +1,58 @@
+{
+  "action": "run",
+  "parameters": {
+    "base_url": "https://kbc-test.api.moneys3.eu",
+    "client_id": "DUMMY_CLIENT_ID",
+    "#client_secret": "DUMMY_SECRET",
+    "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb",
+    "endpoint": "IssuedOrder",
+    "write_mode": "create",
+    "continue_on_error": true,
+    "poll_timeout_s": 0,
+    "field_mapping": [
+      {
+        "source_column": "partner_name",
+        "destination_field": "partnerAddress.businessAddress.name"
+      },
+      {
+        "source_column": "issue_date",
+        "destination_field": "dateOfIssue"
+      },
+      {
+        "source_column": "descr",
+        "destination_field": "description"
+      }
+    ],
+    "lines_table": "order_lines.csv",
+    "lines_join_key": "order_number",
+    "lines_field_mapping": [
+      {
+        "source_column": "item_name",
+        "destination_field": "description"
+      },
+      {
+        "source_column": "quantity",
+        "destination_field": "amount"
+      },
+      {
+        "source_column": "unit_price",
+        "destination_field": "unitPrice"
+      }
+    ]
+  },
+  "image_parameters": {
+    "app_id": "DUMMY_APP_ID"
+  },
+  "storage": {
+    "input": {
+      "tables": [
+        {
+          "destination": "orders.csv"
+        },
+        {
+          "destination": "order_lines.csv"
+        }
+      ]
+    }
+  }
+}

@@ -1,15 +1,17 @@
 [
   {
-    "name": "01_test_connection",
+    "name": "01_testConnection",
     "description": "Validate Money S3 API connection (token fetch + GraphQL introspection).",
     "config": {
       "action": "testConnection",
       "parameters": {
-        "base_url": "http://localhost:28085",
-        "scope": "s3api",
-        "app_id": "DUMMY_APP_ID",
+        "base_url": "https://kbc-test.api.moneys3.eu",
         "client_id": "DUMMY_CLIENT_ID",
-        "#client_secret": "DUMMY_SECRET"
+        "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb"
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
       }
     }
   },
@@ -19,11 +21,13 @@
     "config": {
       "action": "list_endpoints",
       "parameters": {
-        "base_url": "http://localhost:28085",
-        "scope": "s3api",
-        "app_id": "DUMMY_APP_ID",
+        "base_url": "https://kbc-test.api.moneys3.eu",
         "client_id": "DUMMY_CLIENT_ID",
-        "#client_secret": "DUMMY_SECRET"
+        "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb"
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
       }
     }
   },
@@ -33,43 +37,65 @@
     "config": {
       "action": "load_field_mapping",
       "parameters": {
-        "base_url": "http://localhost:28085",
-        "scope": "s3api",
-        "app_id": "DUMMY_APP_ID",
+        "base_url": "https://kbc-test.api.moneys3.eu",
         "client_id": "DUMMY_CLIENT_ID",
         "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb",
         "endpoint": "Company"
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
       },
       "storage": {
         "input": {
           "tables": [
-            {"destination": "companies.csv", "columns": ["business_name", "email", "identification_number"]}
+            {
+              "destination": "companies.csv",
+              "columns": ["business_name", "email", "identification_number"]
+            }
           ]
         }
       }
     }
   },
   {
-    "name": "04_create_company",
-    "description": "Create a Company (address-book) record in Money S3 via createCompany (real write).",
+    "name": "04_list_agendas",
+    "description": "List Money S3 agendas (company databases) for the agenda dropdown.",
+    "config": {
+      "action": "list_agendas",
+      "parameters": {
+        "base_url": "https://kbc-test.api.moneys3.eu",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb"
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
+      }
+    }
+  },
+  {
+    "name": "05_create_company",
+    "description": "Create Company records in Money S3 (async, poll_timeout_s=0 -> UNPROCESSED).",
     "config": {
       "action": "run",
       "parameters": {
-        "base_url": "http://localhost:28085",
-        "scope": "s3api",
-        "app_id": "DUMMY_APP_ID",
+        "base_url": "https://kbc-test.api.moneys3.eu",
         "client_id": "DUMMY_CLIENT_ID",
         "#client_secret": "DUMMY_SECRET",
-        "agenda_id": "70efd056-d613-46f0-97bd-949c9d0989da",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb",
         "endpoint": "Company",
         "write_mode": "create",
-        "poll_timeout_s": 0,
         "continue_on_error": true,
+        "poll_timeout_s": 0,
         "field_mapping": [
           {"source_column": "business_name", "destination_field": "businessAddress.name"},
           {"source_column": "email", "destination_field": "email"},
           {"source_column": "identification_number", "destination_field": "identificationNumber"}
         ]
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
       },
       "storage": {
         "input": {
@@ -81,44 +107,146 @@
     }
   },
   {
-    "name": "05_run_missing_endpoint",
+    "name": "06_create_article",
+    "description": "Create Article records in Money S3 (async, poll_timeout_s=0 -> UNPROCESSED).",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "base_url": "https://kbc-test.api.moneys3.eu",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb",
+        "endpoint": "Article",
+        "write_mode": "create",
+        "continue_on_error": true,
+        "poll_timeout_s": 0,
+        "field_mapping": [
+          {"source_column": "code", "destination_field": "catalogue"},
+          {"source_column": "name", "destination_field": "description"},
+          {"source_column": "unit", "destination_field": "mainMeasureUnit"}
+        ]
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
+      },
+      "storage": {
+        "input": {
+          "tables": [
+            {"destination": "articles.csv"}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "07_issued_invoice",
+    "description": "Create IssuedInvoice documents with line items (async, poll_timeout_s=0 -> UNPROCESSED).",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "base_url": "https://kbc-test.api.moneys3.eu",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb",
+        "endpoint": "IssuedInvoice",
+        "write_mode": "create",
+        "continue_on_error": true,
+        "poll_timeout_s": 0,
+        "field_mapping": [
+          {"source_column": "invoice_number", "destination_field": "documentNumber"},
+          {"source_column": "partner_name", "destination_field": "partnerAddress.businessAddress.name"},
+          {"source_column": "issue_date", "destination_field": "dateOfIssue"}
+        ],
+        "lines_table": "invoice_lines.csv",
+        "lines_join_key": "invoice_number",
+        "lines_field_mapping": [
+          {"source_column": "item_name", "destination_field": "description"},
+          {"source_column": "quantity", "destination_field": "amount"},
+          {"source_column": "unit_price", "destination_field": "unitPrice"}
+        ]
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
+      },
+      "storage": {
+        "input": {
+          "tables": [
+            {"destination": "invoices.csv"},
+            {"destination": "invoice_lines.csv"}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "08_issued_order",
+    "description": "Create IssuedOrder documents with line items (async, poll_timeout_s=0 -> UNPROCESSED).",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "base_url": "https://kbc-test.api.moneys3.eu",
+        "client_id": "DUMMY_CLIENT_ID",
+        "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb",
+        "endpoint": "IssuedOrder",
+        "write_mode": "create",
+        "continue_on_error": true,
+        "poll_timeout_s": 0,
+        "field_mapping": [
+          {"source_column": "partner_name", "destination_field": "partnerAddress.businessAddress.name"},
+          {"source_column": "issue_date", "destination_field": "dateOfIssue"},
+          {"source_column": "descr", "destination_field": "description"}
+        ],
+        "lines_table": "order_lines.csv",
+        "lines_join_key": "order_number",
+        "lines_field_mapping": [
+          {"source_column": "item_name", "destination_field": "description"},
+          {"source_column": "quantity", "destination_field": "amount"},
+          {"source_column": "unit_price", "destination_field": "unitPrice"}
+        ]
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
+      },
+      "storage": {
+        "input": {
+          "tables": [
+            {"destination": "orders.csv"},
+            {"destination": "order_lines.csv"}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "09_run_missing_endpoint",
     "description": "Run without an endpoint selected -> fail with exit code 1 (no HTTP).",
     "config": {
       "action": "run",
       "parameters": {
-        "base_url": "http://localhost:28085",
-        "scope": "s3api",
-        "app_id": "DUMMY_APP_ID",
+        "base_url": "https://kbc-test.api.moneys3.eu",
         "client_id": "DUMMY_CLIENT_ID",
-        "#client_secret": "DUMMY_SECRET"
+        "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb"
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
       }
     }
   },
   {
-    "name": "06_load_field_mapping_missing_endpoint",
+    "name": "10_load_field_mapping_missing_endpoint",
     "description": "load_field_mapping without an endpoint -> fail with exit code 1 (no HTTP).",
     "config": {
       "action": "load_field_mapping",
       "parameters": {
-        "base_url": "http://localhost:28085",
-        "scope": "s3api",
-        "app_id": "DUMMY_APP_ID",
+        "base_url": "https://kbc-test.api.moneys3.eu",
         "client_id": "DUMMY_CLIENT_ID",
-        "#client_secret": "DUMMY_SECRET"
-      }
-    }
-  },
-  {
-    "name": "07_list_agendas",
-    "description": "List Money S3 agendas (company databases) for the agenda dropdown.",
-    "config": {
-      "action": "list_agendas",
-      "parameters": {
-        "base_url": "http://localhost:28085",
-        "scope": "s3api",
-        "app_id": "DUMMY_APP_ID",
-        "client_id": "DUMMY_CLIENT_ID",
-        "#client_secret": "DUMMY_SECRET"
+        "#client_secret": "DUMMY_SECRET",
+        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb"
+      },
+      "image_parameters": {
+        "app_id": "DUMMY_APP_ID"
       }
     }
   }

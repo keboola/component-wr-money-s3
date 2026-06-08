@@ -1,0 +1,12 @@
+{
+  "exit_code": null,
+  "stderr": "",
+  "logs": [
+    {
+      "level": "INFO",
+      "logger": "root",
+      "message": "Submitted 2 record(s) to Money S3 endpoint 'IssuedInvoice'; 0 failed.",
+      "timestamp": "2026-06-08T17:32:55.000Z"
+    }
+  ]
+}

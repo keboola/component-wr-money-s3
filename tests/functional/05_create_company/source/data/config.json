@@ -1,0 +1,39 @@
+{
+  "action": "run",
+  "parameters": {
+    "base_url": "https://kbc-test.api.moneys3.eu",
+    "client_id": "DUMMY_CLIENT_ID",
+    "#client_secret": "DUMMY_SECRET",
+    "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb",
+    "endpoint": "Company",
+    "write_mode": "create",
+    "continue_on_error": true,
+    "poll_timeout_s": 0,
+    "field_mapping": [
+      {
+        "source_column": "business_name",
+        "destination_field": "businessAddress.name"
+      },
+      {
+        "source_column": "email",
+        "destination_field": "email"
+      },
+      {
+        "source_column": "identification_number",
+        "destination_field": "identificationNumber"
+      }
+    ]
+  },
+  "image_parameters": {
+    "app_id": "DUMMY_APP_ID"
+  },
+  "storage": {
+    "input": {
+      "tables": [
+        {
+          "destination": "companies.csv"
+        }
+      ]
+    }
+  }
+}

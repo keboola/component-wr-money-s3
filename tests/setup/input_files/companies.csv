@@ -1,2 +1,6 @@
-business_name,email,identification_number
-Test Company VCR s.r.o.,vcr-test@example.com,12345678
+business_name,email,identification_number,is_vat_payer,note
+Kovács és Társa Kft.,kovacs@example.hu,12345679,true,Törzsvásárló
+Nagy Bt.,nagy@example.hu,25112309,false,Új partner
+Szabó Zrt.,szabo@example.hu,45678901,true,Nagykereskedő
+Tóth és Fiai Kft.,toth@example.hu,60000007,true,Belföldi vevő
+Horváth Kereskedelmi Kft.,horvath@example.hu,87654326,false,Alkalmi partner

@@ -1,0 +1,28 @@
+{
+  "files": {},
+  "hash_algorithm": "sha256",
+  "tables": {
+    "write_log.csv": {
+      "columns": [
+        "row_index",
+        "endpoint",
+        "write_mode",
+        "key_value",
+        "submitted_at",
+        "import_guid",
+        "state",
+        "state_info"
+      ],
+      "hash": "sha256:7f29dfea3f4aae3fd912acd9836ab1f4337a2cddfb0b1ae98a8d8d293e2754aa",
+      "row_count": 3,
+      "size_bytes": 285
+    },
+    "write_log.csv.manifest": {
+      "columns": null,
+      "hash": "sha256:19e59c4f4b012921b75246cf16c84d2a32ee9abdff2ffcaea32c895492cb6910",
+      "row_count": null,
+      "size_bytes": 1397
+    }
+  },
+  "version": "1.0"
+}
