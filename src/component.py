@@ -128,6 +128,27 @@ class Component(ComponentBase):
                 return name, typ
         return lists[0] if lists else (None, None)
 
+    def _endpoint_metadata(self, client: MoneyS3Client, cfg: WriterConfiguration) -> dict:
+        """Introspect cfg.endpoint's input type for the UI: the writable API fields, whether the
+        endpoint has a line-item collection, and that collection's fields. Endpoint-only (no input
+        table needed), so both get_endpoint_metadata and load_field_mapping return the same _metadata_
+        and never clobber each other's flags. label == field_name so the UI shows the real API name.
+        """
+        _name, _arg, input_type = client.resolve_mutation(cfg.endpoint, cfg.write_mode)
+        fields = client.get_input_fields(input_type.rstrip("!"))
+        api_fields = [{"field_name": f["field_name"], "label": f["field_name"]} for f in fields if not f["is_list"]]
+        items_field, element_type = self._line_item_field(fields)
+        line_api_fields = (
+            [
+                {"field_name": f["field_name"], "label": f["field_name"]}
+                for f in client.get_input_fields(element_type)
+                if not f["is_list"]
+            ]
+            if items_field
+            else []
+        )
+        return {"api_fields": api_fields, "has_line_items": items_field is not None, "line_api_fields": line_api_fields}
+
     def _run_document(self, client, cfg, mutation_name, arg_name, input_type, header_fields, header_types):
         if not cfg.lines_join_key:
             raise UserException("A 'lines join key' is required when a lines table is configured.")
@@ -238,26 +259,24 @@ class Component(ComponentBase):
             raise UserException("Input table has no column list; select columns in the input mapping.")
 
         client = self._build_client(cfg)
-        _name, _arg, input_type = client.resolve_mutation(cfg.endpoint, cfg.write_mode)
-        api_fields = [f for f in client.get_input_fields(input_type.rstrip("!")) if not f["is_list"]]
-        field_names = [f["field_name"] for f in api_fields]
-
+        meta = self._endpoint_metadata(client, cfg)
+        field_names = [f["field_name"] for f in meta["api_fields"]]
         existing = {fm.source_column: fm.destination_field for fm in cfg.field_mapping}
         field_mapping = [
             {"source_column": col, "destination_field": existing.get(col) or fuzzy_match(col, field_names)}
             for col in columns
         ]
-        return {
-            "type": "data",
-            "data": {
-                "field_mapping": field_mapping,
-                "_metadata_": {
-                    # label == field_name on purpose: the row schema shows {{item.label}} as the dropdown
-                    # title, so surface the real API field name (e.g. identificationNumber), not an alias.
-                    "api_fields": [{"field_name": f["field_name"], "label": f["field_name"]} for f in api_fields]
-                },
-            },
-        }
+        return {"type": "data", "data": {"field_mapping": field_mapping, "_metadata_": meta}}
+
+    @sync_action("get_endpoint_metadata")
+    def get_endpoint_metadata(self) -> dict:
+        # Autoloaded when the endpoint changes: drives the UI by populating the field dropdowns and the
+        # has_line_items flag that conditionally reveals the line-item fields. No input table required.
+        cfg = WriterConfiguration(**self.configuration.parameters)
+        if not cfg.endpoint:
+            raise UserException("Please select an endpoint first.")
+        client = self._build_client(cfg)
+        return {"type": "data", "data": {"_metadata_": self._endpoint_metadata(client, cfg)}}
 
 
 if __name__ == "__main__":

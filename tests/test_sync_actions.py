@@ -105,3 +105,45 @@ def test_load_field_mapping_fuzzy_fills_and_preserves(tmp_path, monkeypatch):
     assert fm["zzz_unrelated"] == ""  # no confident match -> left blank for manual mapping
     assert res["data"]["_metadata_"]["api_fields"][0]["field_name"] == "businessName"
     assert res["data"]["_metadata_"]["api_fields"][0]["label"] == "businessName"  # label = raw field name
+    assert res["data"]["_metadata_"]["has_line_items"] is False  # Company is a flat endpoint
+
+
+def test_get_endpoint_metadata_document_endpoint(tmp_path, monkeypatch):
+    data = _datadir(tmp_path, _params(endpoint="IssuedInvoice"), "run")
+    monkeypatch.setenv("KBC_DATADIR", str(data))
+    fake = MagicMock()
+    fake.resolve_mutation.return_value = ("createIssuedInvoice", "issuedInvoice", "IssuedInvoiceInput!")
+    fake.get_input_fields.side_effect = [
+        [  # header type: a scalar header field + the line-item collection
+            {"field_name": "documentNumber", "type": "String", "is_list": False},
+            {"field_name": "items", "type": "IssuedInvoiceItemInput", "is_list": True},
+        ],
+        [  # line element type
+            {"field_name": "description", "type": "String", "is_list": False},
+            {"field_name": "amount", "type": "Decimal", "is_list": False},
+        ],
+    ]
+    comp = Component()
+    monkeypatch.setattr(comp, "_build_client", lambda cfg: fake)
+    meta = comp.get_endpoint_metadata()["data"]["_metadata_"]
+    assert meta["has_line_items"] is True
+    assert {"field_name": "documentNumber", "label": "documentNumber"} in meta["api_fields"]
+    assert all(f["field_name"] != "items" for f in meta["api_fields"])  # list field is not a mappable scalar
+    assert {"field_name": "description", "label": "description"} in meta["line_api_fields"]
+    assert {"field_name": "amount", "label": "amount"} in meta["line_api_fields"]
+
+
+def test_get_endpoint_metadata_flat_endpoint(tmp_path, monkeypatch):
+    data = _datadir(tmp_path, _params(endpoint="Company"), "run")
+    monkeypatch.setenv("KBC_DATADIR", str(data))
+    fake = MagicMock()
+    fake.resolve_mutation.return_value = ("createCompany", "company", "CompanyInput!")
+    fake.get_input_fields.return_value = [
+        {"field_name": "businessAddress", "type": "AddressInput", "is_list": False},
+        {"field_name": "email", "type": "String", "is_list": False},
+    ]
+    comp = Component()
+    monkeypatch.setattr(comp, "_build_client", lambda cfg: fake)
+    meta = comp.get_endpoint_metadata()["data"]["_metadata_"]
+    assert meta["has_line_items"] is False
+    assert meta["line_api_fields"] == []

@@ -16,6 +16,20 @@
         }
       }
     },
+    "_load_endpoint_metadata": {
+      "type": "button",
+      "format": "sync-action",
+      "propertyOrder": 11,
+      "options": {
+        "hidden": true,
+        "async": {
+          "label": "Load endpoint metadata",
+          "action": "get_endpoint_metadata",
+          "autoload": ["endpoint"],
+          "cache": false
+        }
+      }
+    },
     "write_mode": {
       "type": "string",
       "title": "Write Mode",
@@ -100,24 +114,50 @@
         }
       }
     },
+    "_has_line_items_helper": {
+      "type": "boolean",
+      "propertyOrder": 55,
+      "template": "{{val}}",
+      "watch": {
+        "val": "_metadata_.has_line_items"
+      },
+      "options": {
+        "hidden": true
+      }
+    },
     "lines_table": {
       "type": "string",
       "title": "Lines Table (destination filename)",
       "description": "Destination filename of the second input table that contains line items. Required for document mode (e.g. invoices with line rows).",
-      "propertyOrder": 60
+      "propertyOrder": 60,
+      "options": {
+        "dependencies": {
+          "_has_line_items_helper": true
+        }
+      }
     },
     "lines_join_key": {
       "type": "string",
       "title": "Lines Join Key",
       "description": "Column name that joins header rows to their corresponding line rows.",
-      "propertyOrder": 70
+      "propertyOrder": 70,
+      "options": {
+        "dependencies": {
+          "_has_line_items_helper": true
+        }
+      }
     },
     "lines_field_mapping": {
       "type": "array",
       "title": "Lines Field Mapping",
       "format": "table",
-      "description": "Field mapping for line items. The load mapping action does not yet populate line-item field suggestions, so destination fields must be typed manually (dotted nested paths like billingAddress.street are allowed).",
+      "description": "Field mapping for line items.",
       "propertyOrder": 80,
+      "options": {
+        "dependencies": {
+          "_has_line_items_helper": true
+        }
+      },
       "items": {
         "type": "object",
         "required": [
@@ -203,6 +243,9 @@
           "items": {
             "type": "object"
           }
+        },
+        "has_line_items": {
+          "type": "boolean"
         }
       }
     }
