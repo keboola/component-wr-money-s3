@@ -13,8 +13,7 @@
           "type": "STRING"
         }
       },
-      "nullable": true,
-      "primary_key": true
+      "nullable": true
     },
     {
       "name": "endpoint",
@@ -59,8 +58,7 @@
           "type": "STRING"
         }
       },
-      "nullable": true,
-      "primary_key": true
+      "nullable": true
     },
     {
       "name": "state",

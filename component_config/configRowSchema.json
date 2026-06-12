@@ -16,20 +16,6 @@
         }
       }
     },
-    "_load_endpoint_metadata": {
-      "type": "button",
-      "format": "sync-action",
-      "propertyOrder": 11,
-      "options": {
-        "hidden": true,
-        "async": {
-          "label": "Load endpoint metadata",
-          "action": "get_endpoint_metadata",
-          "autoload": ["endpoint"],
-          "cache": false
-        }
-      }
-    },
     "write_mode": {
       "type": "string",
       "title": "Write Mode",
@@ -114,80 +100,89 @@
         }
       }
     },
-    "_has_line_items_helper": {
-      "type": "boolean",
-      "propertyOrder": 55,
-      "template": "{{val}}",
-      "watch": {
-        "val": "_metadata_.has_line_items"
-      },
-      "options": {
-        "hidden": true
-      }
-    },
-    "lines_table": {
-      "type": "string",
-      "title": "Lines Table (destination filename)",
-      "description": "Destination filename of the second input table that contains line items. Required for document mode (e.g. invoices with line rows).",
+    "line_items": {
+      "type": "object",
+      "title": "Line Items (Optional)",
+      "description": "Shown only for document endpoints that have a line-item collection (invoices, orders, delivery notes, etc.).",
       "propertyOrder": 60,
       "options": {
+        "collapsed": true,
         "dependencies": {
-          "_has_line_items_helper": true
-        }
-      }
-    },
-    "lines_join_key": {
-      "type": "string",
-      "title": "Lines Join Key",
-      "description": "Column name that joins header rows to their corresponding line rows.",
-      "propertyOrder": 70,
-      "options": {
-        "dependencies": {
-          "_has_line_items_helper": true
-        }
-      }
-    },
-    "lines_field_mapping": {
-      "type": "array",
-      "title": "Lines Field Mapping",
-      "format": "table",
-      "description": "Field mapping for line items.",
-      "propertyOrder": 80,
-      "options": {
-        "dependencies": {
-          "_has_line_items_helper": true
+          "endpoint": [
+            "CashVoucher",
+            "IssuedDeliveryNote",
+            "IssuedInquiry",
+            "IssuedInvoice",
+            "IssuedOffer",
+            "IssuedOrder",
+            "IssuedSlip",
+            "ReceivedDeliveryNote",
+            "ReceivedInquiry",
+            "ReceivedInvoice",
+            "ReceivedOffer",
+            "ReceivedOrder",
+            "ReceivedSlip",
+            "SaleSlip",
+            "StockTakingDocument",
+            "TransferNote"
+          ]
         }
       },
-      "items": {
-        "type": "object",
-        "required": [
-          "source_column",
-          "destination_field"
-        ],
-        "properties": {
-          "source_column": {
-            "type": "string",
-            "title": "Source Column",
-            "options": {
-              "readOnly": true
-            }
+      "properties": {
+        "lines_table": {
+          "type": "string",
+          "title": "Lines Table (destination filename)",
+          "description": "Destination filename of the second input table that contains line items. Required for document mode (e.g. invoices with line rows).",
+          "propertyOrder": 10
+        },
+        "lines_join_key": {
+          "type": "array",
+          "title": "Lines Join Key(s)",
+          "description": "Header column(s) that link each header row to its line rows; must also exist in the lines table. Pick from the header's mapped columns or type names. Add more than one for a composite join key.",
+          "format": "select",
+          "uniqueItems": true,
+          "propertyOrder": 20,
+          "items": {
+            "type": "string"
           },
-          "destination_field": {
-            "type": "string",
-            "title": "Destination Field",
-            "format": "select",
-            "watch": {
-              "line_api_fields": "_metadata_.line_api_fields"
-            },
-            "enumSource": [
-              {
-                "source": "line_api_fields",
-                "value": "{{item.field_name}}",
-                "title": "{{item.label}}"
-              }
+          "watch": {
+            "header_columns": "field_mapping"
+          },
+          "enumSource": [
+            {
+              "source": "header_columns",
+              "value": "{{item.source_column}}",
+              "title": "{{item.source_column}}"
+            }
+          ],
+          "options": {
+            "creatable": true
+          }
+        },
+        "lines_field_mapping": {
+          "type": "array",
+          "title": "Lines Field Mapping",
+          "format": "table",
+          "description": "Field mapping for line items. Enter the Money S3 API field name for each line column (e.g. description, amount, unitPrice).",
+          "propertyOrder": 30,
+          "items": {
+            "type": "object",
+            "required": [
+              "source_column",
+              "destination_field"
             ],
-            "options": {
-              "tags": true
+            "properties": {
+              "source_column": {
+                "type": "string",
+                "title": "Source Column",
+                "options": {
+                  "readOnly": true
+                }
+              },
+              "destination_field": {
+                "type": "string",
+                "title": "Destination Field"
+              }
             }
           }
         }
@@ -237,15 +232,6 @@
           "items": {
             "type": "object"
           }
-        },
-        "line_api_fields": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
-        },
-        "has_line_items": {
-          "type": "boolean"
         }
       }
     }

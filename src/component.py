@@ -128,27 +128,6 @@ class Component(ComponentBase):
                 return name, typ
         return lists[0] if lists else (None, None)
 
-    def _endpoint_metadata(self, client: MoneyS3Client, cfg: WriterConfiguration) -> dict:
-        """Introspect cfg.endpoint's input type for the UI: the writable API fields, whether the
-        endpoint has a line-item collection, and that collection's fields. Endpoint-only (no input
-        table needed), so both get_endpoint_metadata and load_field_mapping return the same _metadata_
-        and never clobber each other's flags. label == field_name so the UI shows the real API name.
-        """
-        _name, _arg, input_type = client.resolve_mutation(cfg.endpoint, cfg.write_mode)
-        fields = client.get_input_fields(input_type.rstrip("!"))
-        api_fields = [{"field_name": f["field_name"], "label": f["field_name"]} for f in fields if not f["is_list"]]
-        items_field, element_type = self._line_item_field(fields)
-        line_api_fields = (
-            [
-                {"field_name": f["field_name"], "label": f["field_name"]}
-                for f in client.get_input_fields(element_type)
-                if not f["is_list"]
-            ]
-            if items_field
-            else []
-        )
-        return {"api_fields": api_fields, "has_line_items": items_field is not None, "line_api_fields": line_api_fields}
-
     def _run_document(self, client, cfg, mutation_name, arg_name, input_type, header_fields, header_types):
         if not cfg.lines_join_key:
             raise UserException("A 'lines join key' is required when a lines table is configured.")
@@ -164,13 +143,17 @@ class Component(ComponentBase):
             raise UserException("Document mode needs two input tables: a header table and a lines table.")
         headers = self._read_rows(header_dest)
         all_lines = self._read_rows(cfg.lines_table)
-        lines_by_key: dict[str, list] = {}
+
+        def join_value(row):
+            return tuple(row.get(k, "") for k in cfg.lines_join_key)
+
+        lines_by_key: dict[tuple, list] = {}
         for ln in all_lines:
-            lines_by_key.setdefault(ln.get(cfg.lines_join_key, ""), []).append(ln)
+            lines_by_key.setdefault(join_value(ln), []).append(ln)
 
         results, failed = [], []
         for idx, header in enumerate(headers):
-            key = header.get(cfg.lines_join_key, "")
+            key = join_value(header)
             try:
                 payload = build_document_payload(
                     header,
@@ -209,13 +192,12 @@ class Component(ComponentBase):
         return {**base, "import_guid": guid, "state": state or "UNKNOWN", "state_info": info or ""}
 
     def _write_results(self, results: list[dict]):
-        # Audit log, upserted on (import_guid, row_index): successful rows accumulate across runs
-        # (each run yields fresh GUIDs), while failed-before-submit rows (empty import_guid) dedupe
-        # by row_index. write_always keeps the log even on a failed job.
+        # Append-only audit log: every run's attempts accumulate (write_always keeps them even on a
+        # failed job). No primary key -- creates are not idempotent (each run yields fresh GUIDs) and
+        # failed-before-submit rows have no GUID, so upsert-by-GUID would be unsound and collide.
         out = self.create_out_table_definition(
             "write_log.csv",
             schema=RESULT_COLUMNS,
-            primary_key=["import_guid", "row_index"],
             incremental=True,
             write_always=True,
             has_header=True,
@@ -259,24 +241,23 @@ class Component(ComponentBase):
             raise UserException("Input table has no column list; select columns in the input mapping.")
 
         client = self._build_client(cfg)
-        meta = self._endpoint_metadata(client, cfg)
-        field_names = [f["field_name"] for f in meta["api_fields"]]
+        try:
+            _name, _arg, input_type = client.resolve_mutation(cfg.endpoint, cfg.write_mode)
+        except UserException:
+            # The mappable field universe is the same regardless of write mode, and most Money S3
+            # endpoints expose only create<Endpoint>; fall back so "Re-load mapping" works in Update
+            # mode too. The actual run still resolves the real write-mode mutation.
+            _name, _arg, input_type = client.resolve_mutation(cfg.endpoint, "create")
+        fields = client.get_input_fields(input_type.rstrip("!"))
+        # label == field_name so the dropdown shows the real Money S3 API field name.
+        api_fields = [{"field_name": f["field_name"], "label": f["field_name"]} for f in fields if not f["is_list"]]
+        field_names = [f["field_name"] for f in api_fields]
         existing = {fm.source_column: fm.destination_field for fm in cfg.field_mapping}
         field_mapping = [
             {"source_column": col, "destination_field": existing.get(col) or fuzzy_match(col, field_names)}
             for col in columns
         ]
-        return {"type": "data", "data": {"field_mapping": field_mapping, "_metadata_": meta}}
-
-    @sync_action("get_endpoint_metadata")
-    def get_endpoint_metadata(self) -> dict:
-        # Autoloaded when the endpoint changes: drives the UI by populating the field dropdowns and the
-        # has_line_items flag that conditionally reveals the line-item fields. No input table required.
-        cfg = WriterConfiguration(**self.configuration.parameters)
-        if not cfg.endpoint:
-            raise UserException("Please select an endpoint first.")
-        client = self._build_client(cfg)
-        return {"type": "data", "data": {"_metadata_": self._endpoint_metadata(client, cfg)}}
+        return {"type": "data", "data": {"field_mapping": field_mapping, "_metadata_": {"api_fields": api_fields}}}
 
 
 if __name__ == "__main__":

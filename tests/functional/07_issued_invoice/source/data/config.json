@@ -24,7 +24,9 @@
       }
     ],
     "lines_table": "invoice_lines.csv",
-    "lines_join_key": "invoice_number",
+    "lines_join_key": [
+      "invoice_number"
+    ],
     "lines_field_mapping": [
       {
         "source_column": "item_name",

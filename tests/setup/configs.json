@@ -193,7 +193,9 @@
           }
         ],
         "lines_table": "invoice_lines.csv",
-        "lines_join_key": "invoice_number",
+        "lines_join_key": [
+          "invoice_number"
+        ],
         "lines_field_mapping": [
           {
             "source_column": "item_name",
@@ -255,7 +257,9 @@
           }
         ],
         "lines_table": "order_lines.csv",
-        "lines_join_key": "order_number",
+        "lines_join_key": [
+          "order_number"
+        ],
         "lines_field_mapping": [
           {
             "source_column": "item_name",
@@ -314,23 +318,6 @@
         "client_id": "DUMMY_CLIENT_ID",
         "#client_secret": "DUMMY_SECRET",
         "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb"
-      },
-      "image_parameters": {
-        "app_id": "DUMMY_APP_ID"
-      }
-    }
-  },
-  {
-    "name": "11_get_endpoint_metadata",
-    "description": "Endpoint metadata for a document endpoint: has_line_items=true + line field suggestions.",
-    "config": {
-      "action": "get_endpoint_metadata",
-      "parameters": {
-        "base_url": "https://kbc-test.api.moneys3.eu",
-        "client_id": "DUMMY_CLIENT_ID",
-        "#client_secret": "DUMMY_SECRET",
-        "agenda_id": "4ffa7191-f86f-41ab-b687-610fa1fc2dcb",
-        "endpoint": "IssuedInvoice"
       },
       "image_parameters": {
         "app_id": "DUMMY_APP_ID"

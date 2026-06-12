@@ -27,7 +27,7 @@ class WriterConfiguration(BaseModel):
     key_field: str = "guid"
     field_mapping: list[FieldMapping] = Field(default_factory=list)
     lines_table: str | None = None
-    lines_join_key: str | None = None
+    lines_join_key: list[str] = Field(default_factory=list)
     lines_field_mapping: list[FieldMapping] = Field(default_factory=list)
     batch_size: int = 100
     poll_timeout_s: int = (
@@ -38,6 +38,12 @@ class WriterConfiguration(BaseModel):
     debug: bool = False
 
     def __init__(self, **data):
+        nested = data.pop("line_items", None)
+        if nested:
+            for key in ("lines_table", "lines_join_key", "lines_field_mapping"):
+                value = nested.get(key)
+                if value not in (None, "", []):
+                    data[key] = value
         try:
             super().__init__(**data)
         except ValidationError as e:

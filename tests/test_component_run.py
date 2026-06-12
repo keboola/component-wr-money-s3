@@ -222,7 +222,7 @@ def test_run_document_builds_items(tmp_path, monkeypatch):
         "endpoint": "IssuedInvoice",
         "field_mapping": [{"source_column": "var_sym", "destination_field": "variableSymbol"}],
         "lines_table": "lines.csv",
-        "lines_join_key": "doc_no",
+        "lines_join_key": ["doc_no"],
         "lines_field_mapping": [{"source_column": "desc", "destination_field": "description"}],
     }
     data = _make_doc_datadir(
@@ -251,6 +251,47 @@ def test_run_document_builds_items(tmp_path, monkeypatch):
     assert payload["items"] == [{"description": "Widget"}, {"description": "Gadget"}]
 
 
+def test_run_document_composite_join_key(tmp_path, monkeypatch):
+    # A two-column join key groups lines by the (branch, doc_no) tuple. Both headers share doc_no
+    # "F1" and would collide on a single key -- the composite key must keep their lines separate.
+    params = {
+        "base_url": "http://h",
+        "app_id": "A",
+        "client_id": "C",
+        "#client_secret": "S",
+        "agenda_id": "AG-1",
+        "endpoint": "IssuedInvoice",
+        "field_mapping": [{"source_column": "var_sym", "destination_field": "variableSymbol"}],
+        "lines_table": "lines.csv",
+        "lines_join_key": ["branch", "doc_no"],
+        "lines_field_mapping": [{"source_column": "desc", "destination_field": "description"}],
+    }
+    data = _make_doc_datadir(
+        tmp_path,
+        params,
+        [{"branch": "A", "doc_no": "F1", "var_sym": "1"}, {"branch": "B", "doc_no": "F1", "var_sym": "2"}],
+        [{"branch": "A", "doc_no": "F1", "desc": "Widget"}, {"branch": "B", "doc_no": "F1", "desc": "Gadget"}],
+    )
+    monkeypatch.setenv("KBC_DATADIR", str(data))
+    fake = MagicMock()
+    fake.resolve_mutation.return_value = ("createIssuedInvoice", "issuedInvoice", "IssuedInvoiceInput!")
+    fake.get_input_fields.side_effect = [
+        [
+            {"field_name": "variableSymbol", "type": "String", "is_list": False},
+            {"field_name": "items", "type": "IssuedInvoiceItemInput", "is_list": True},
+        ],  # header type
+        [{"field_name": "description", "type": "String", "is_list": False}],  # line element type
+    ]
+    fake.submit.return_value = "G1"
+    fake.wait_for_import.return_value = ("OK", "")
+    comp = Component()
+    monkeypatch.setattr(comp, "_build_client", lambda c: fake)
+    comp.run()
+    payloads = [call[0][3] for call in fake.submit.call_args_list]
+    assert payloads[0]["items"] == [{"description": "Widget"}]  # branch A
+    assert payloads[1]["items"] == [{"description": "Gadget"}]  # branch B -- not cross-contaminated
+
+
 def test_document_picks_items_over_other_lists(tmp_path, monkeypatch):
     # IssuedInvoiceInput exposes several list-of-*Input fields (vatRateSummary, ...) BEFORE `items`;
     # line rows must land in `items`, not the first list-of-*Input encountered.
@@ -263,7 +304,7 @@ def test_document_picks_items_over_other_lists(tmp_path, monkeypatch):
         "endpoint": "IssuedInvoice",
         "field_mapping": [{"source_column": "var_sym", "destination_field": "variableSymbol"}],
         "lines_table": "lines.csv",
-        "lines_join_key": "doc_no",
+        "lines_join_key": ["doc_no"],
         "lines_field_mapping": [{"source_column": "desc", "destination_field": "description"}],
     }
     data = _make_doc_datadir(
@@ -303,7 +344,7 @@ def test_document_missing_line_item_field_raises(tmp_path, monkeypatch):
         "endpoint": "IssuedInvoice",
         "field_mapping": [],
         "lines_table": "lines.csv",
-        "lines_join_key": "doc_no",
+        "lines_join_key": ["doc_no"],
         "lines_field_mapping": [],
     }
     data = _make_doc_datadir(tmp_path, params, [{"doc_no": "F1"}], [{"doc_no": "F1", "desc": "X"}])
@@ -328,7 +369,7 @@ def test_document_coercion_error_raises(tmp_path, monkeypatch):
         "endpoint": "IssuedInvoice",
         "field_mapping": [],
         "lines_table": "lines.csv",
-        "lines_join_key": "doc_no",
+        "lines_join_key": ["doc_no"],
         "lines_field_mapping": [{"source_column": "amt", "destination_field": "unitPrice"}],
     }
     data = _make_doc_datadir(tmp_path, params, [{"doc_no": "F1"}], [{"doc_no": "F1", "amt": "not-a-number"}])
