@@ -37,7 +37,7 @@
       "type": "string",
       "title": "Key Field",
       "default": "guid",
-      "description": "Record identifier field used to match existing records for update.",
+      "description": "Source column whose value is recorded in the write_log output (key_value) for traceability. Note: this does NOT drive update matching — to match existing records on update, map the identifier column in Field Mapping.",
       "propertyOrder": 30,
       "options": {
         "dependencies": {
@@ -187,15 +187,6 @@
           }
         }
       }
-    },
-    "batch_size": {
-      "type": "integer",
-      "title": "Batch Size",
-      "default": 100,
-      "minimum": 1,
-      "maximum": 500,
-      "description": "Number of records submitted per batch.",
-      "propertyOrder": 90
     },
     "poll_timeout_s": {
       "type": "integer",

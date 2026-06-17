@@ -35,6 +35,14 @@ RESULT_COLUMNS = [
 class Component(ComponentBase):
     def __init__(self):
         super().__init__()
+        self.config = WriterConfiguration(**self.configuration.parameters)
+        self._client: MoneyS3Client | None = None
+
+    @property
+    def client(self) -> MoneyS3Client:
+        if self._client is None:
+            self._client = self._build_client(self.config)
+        return self._client
 
     def _build_client(self, cfg: WriterConfiguration) -> MoneyS3Client:
         # app_id identifies the Money S3 application registration; it is the same for every
@@ -58,7 +66,7 @@ class Component(ComponentBase):
         raise UserException(f"Input table '{destination}' not found in input mapping.")
 
     def run(self):
-        cfg = WriterConfiguration(**self.configuration.parameters)
+        cfg = self.config
         if not cfg.endpoint:
             raise UserException("No 'endpoint' selected for this row.")
         if not cfg.agenda_id:
@@ -67,7 +75,7 @@ class Component(ComponentBase):
                 "in the connection config (use the 'Re-load agendas' action to pick one)."
             )
 
-        client = self._build_client(cfg)
+        client = self.client
         mutation_name, arg_name, input_type = client.resolve_mutation(cfg.endpoint, cfg.write_mode)
         header_fields = client.get_input_fields(input_type.rstrip("!"))
         field_types = {f["field_name"]: f["type"] for f in header_fields}
@@ -212,25 +220,19 @@ class Component(ComponentBase):
     def test_connection(self) -> None:
         # The test-connection widget only needs {"status": "success"} (emitted by the platform when
         # this returns nothing) or a non-zero exit on failure — no message/ValidationResult.
-        cfg = WriterConfiguration(**self.configuration.parameters)
-        client = self._build_client(cfg)
-        client.list_create_endpoints()  # forces token + a GraphQL round-trip; raises on failure
+        self.client.list_create_endpoints()  # forces token + a GraphQL round-trip; raises on failure
 
     @sync_action("list_endpoints")
     def list_endpoints(self) -> list[SelectElement]:
-        cfg = WriterConfiguration(**self.configuration.parameters)
-        client = self._build_client(cfg)
-        return [SelectElement(value=e["value"], label=e["label"]) for e in client.list_create_endpoints()]
+        return [SelectElement(value=e["value"], label=e["label"]) for e in self.client.list_create_endpoints()]
 
     @sync_action("list_agendas")
     def list_agendas(self) -> list[SelectElement]:
-        cfg = WriterConfiguration(**self.configuration.parameters)
-        client = self._build_client(cfg)
-        return [SelectElement(value=a["value"], label=a["label"]) for a in client.list_agendas()]
+        return [SelectElement(value=a["value"], label=a["label"]) for a in self.client.list_agendas()]
 
     @sync_action("load_field_mapping")
     def load_field_mapping(self) -> dict:
-        cfg = WriterConfiguration(**self.configuration.parameters)
+        cfg = self.config
         if not cfg.endpoint:
             raise UserException("Please select an endpoint first.")
         tables = self.configuration.tables_input_mapping
@@ -240,7 +242,7 @@ class Component(ComponentBase):
         if not columns:
             raise UserException("Input table has no column list; select columns in the input mapping.")
 
-        client = self._build_client(cfg)
+        client = self.client
         try:
             _name, _arg, input_type = client.resolve_mutation(cfg.endpoint, cfg.write_mode)
         except UserException:
