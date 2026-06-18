@@ -105,6 +105,50 @@ def test_load_field_mapping_fuzzy_fills_and_preserves(tmp_path, monkeypatch):
     assert fm["zzz_unrelated"] == ""  # no confident match -> left blank for manual mapping
     assert res["data"]["_metadata_"]["api_fields"][0]["field_name"] == "businessName"
     assert res["data"]["_metadata_"]["api_fields"][0]["label"] == "businessName"  # label = raw field name
+    assert res["data"]["_metadata_"]["line_api_fields"] == []  # flat endpoint -> no line-item fields
+    assert "line_items" not in res["data"]  # no lines table -> nothing to prefill
+
+
+def test_load_field_mapping_document_prefills_lines(tmp_path, monkeypatch):
+    # Document mode: two input tables (header + lines). Both mappings get prefilled and the line-item
+    # dropdown is fed from the line element type's fields.
+    params = _params(endpoint="IssuedInvoice", lines_table="lines.csv")
+    data = _datadir(tmp_path, params, "run")
+    cfg = json.load(open(data / "config.json"))
+    cfg["storage"] = {
+        "input": {
+            "tables": [
+                {"destination": "invoices.csv", "columns": ["document_number", "partner"]},
+                {"destination": "lines.csv", "columns": ["description", "qty"]},
+            ]
+        }
+    }
+    json.dump(cfg, open(data / "config.json", "w"))
+    monkeypatch.setenv("KBC_DATADIR", str(data))
+
+    fake = MagicMock()
+    fake.resolve_mutation.return_value = ("createIssuedInvoice", "issuedInvoice", "IssuedInvoiceInput!")
+    fake.get_input_fields.side_effect = [
+        [  # header type: a scalar field + the line-item collection
+            {"field_name": "documentNumber", "type": "String", "is_list": False},
+            {"field_name": "items", "type": "IssuedInvoiceItemInput", "is_list": True},
+        ],
+        [  # line element type
+            {"field_name": "description", "type": "String", "is_list": False},
+            {"field_name": "amount", "type": "Decimal", "is_list": False},
+        ],
+    ]
+    comp = Component()
+    monkeypatch.setattr(comp, "_build_client", lambda cfg_: fake)
+    res = comp.load_field_mapping()
+
+    header_fm = {m["source_column"]: m["destination_field"] for m in res["data"]["field_mapping"]}
+    assert header_fm["document_number"] == "documentNumber"  # header column fuzzy-matched
+    assert {"field_name": "description", "label": "description"} in res["data"]["_metadata_"]["line_api_fields"]
+    line_fm = {m["source_column"]: m["destination_field"] for m in res["data"]["line_items"]["lines_field_mapping"]}
+    assert line_fm["description"] == "description"  # line column matched against line element fields
+    assert line_fm["qty"] == ""  # no confident match -> left blank for manual mapping
+    assert res["data"]["line_items"]["lines_table"] == "lines.csv"  # echoed back, not clobbered
 
 
 def test_load_field_mapping_update_mode_falls_back_to_create(tmp_path, monkeypatch):

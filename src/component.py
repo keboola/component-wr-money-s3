@@ -88,7 +88,7 @@ class Component(ComponentBase):
             tables = self.configuration.tables_input_mapping
             if len(tables) != 1:
                 raise UserException(f"Exactly one input table must be mapped for this row. Found: {len(tables)}.")
-            results, failed = [], []
+            jobs = []
             for idx, row in enumerate(self._read_rows(tables[0].destination)):
                 try:
                     payload = build_record_payload(row, cfg.field_mapping, field_types)
@@ -99,14 +99,18 @@ class Component(ComponentBase):
                     raise UserException(
                         f"Row {idx}: could not convert a value for endpoint '{cfg.endpoint}': {e}"
                     ) from e
-                result = self._submit_row(client, cfg, mutation_name, arg_name, input_type, payload, idx, row)
-                results.append(result)
-                if result["state"] in ("ERROR", "SUBMIT_FAILED"):
-                    failed.append(result)
+                jobs.append((idx, row, payload))
+            results, failed = self._submit_in_batches(client, cfg, mutation_name, arg_name, input_type, jobs)
 
         self._write_results(results)
+        unconfirmed = sum(1 for r in results if r["state"] in ("UNPROCESSED", "IN_PROCESS", "UNKNOWN"))
         logging.info(
-            "Submitted %d record(s) to Money S3 endpoint '%s'; %d failed.", len(results), cfg.endpoint, len(failed)
+            "Submitted %d record(s) to Money S3 endpoint '%s'; %d failed, %d unconfirmed (import still "
+            "non-terminal within the poll window — see write_log for final state).",
+            len(results),
+            cfg.endpoint,
+            len(failed),
+            unconfirmed,
         )
         if failed and not cfg.continue_on_error:
             raise UserException(
@@ -159,7 +163,7 @@ class Component(ComponentBase):
         for ln in all_lines:
             lines_by_key.setdefault(join_value(ln), []).append(ln)
 
-        results, failed = [], []
+        jobs = []
         for idx, header in enumerate(headers):
             key = join_value(header)
             try:
@@ -176,28 +180,44 @@ class Component(ComponentBase):
                 raise UserException(
                     f"Document row {idx}: could not convert a value for endpoint '{cfg.endpoint}': {e}"
                 ) from e
-            result = self._submit_row(client, cfg, mutation_name, arg_name, input_type, payload, idx, header)
-            results.append(result)
-            if result["state"] in ("ERROR", "SUBMIT_FAILED"):
-                failed.append(result)
-        return results, failed
+            jobs.append((idx, header, payload))
+        return self._submit_in_batches(client, cfg, mutation_name, arg_name, input_type, jobs)
 
-    def _submit_row(self, client, cfg, mutation_name, arg_name, input_type, payload, idx, row):
-        base = {
-            "row_index": idx,
-            "endpoint": cfg.endpoint,
-            "write_mode": cfg.write_mode,
-            "key_value": row.get(cfg.key_field, ""),
-            "submitted_at": datetime.now(UTC).isoformat(),
-        }
-        try:
-            guid = client.submit(mutation_name, arg_name, input_type, payload)
-            state, info = client.wait_for_import(guid, timeout_s=cfg.poll_timeout_s, interval_s=cfg.poll_interval_s)
-        except UserException as e:
-            # Transport/GraphQL failure mid-run: record it so the write_always audit table keeps every
-            # attempted row (rows already submitted earlier in this run are not lost). Gated like ERROR.
-            return {**base, "import_guid": "", "state": "SUBMIT_FAILED", "state_info": str(e)}
-        return {**base, "import_guid": guid, "state": state or "UNKNOWN", "state_info": info or ""}
+    def _submit_in_batches(self, client, cfg, mutation_name, arg_name, input_type, jobs):
+        """Submit each batch of up to cfg.batch_size records, then poll that batch's import statuses,
+        so the agenda's async imports overlap instead of being confirmed strictly one record at a time.
+        """
+        size = max(cfg.batch_size, 1)
+        results = []
+        for start in range(0, len(jobs), size):
+            submitted = []  # (base, guid, submit_error) for the batch, in row order
+            for idx, row, payload in jobs[start : start + size]:
+                base = {
+                    "row_index": idx,
+                    "endpoint": cfg.endpoint,
+                    "write_mode": cfg.write_mode,
+                    "key_value": row.get(cfg.key_field, ""),
+                    "submitted_at": datetime.now(UTC).isoformat(),
+                }
+                try:
+                    submitted.append((base, client.submit(mutation_name, arg_name, input_type, payload), None))
+                except UserException as e:
+                    # Transport/GraphQL failure: record it so the write_always audit table keeps every
+                    # attempted row (rows already submitted are not lost). Gated like ERROR below.
+                    submitted.append((base, None, str(e)))
+            for base, guid, submit_error in submitted:
+                if submit_error is not None:
+                    results.append({**base, "import_guid": "", "state": "SUBMIT_FAILED", "state_info": submit_error})
+                    continue
+                try:
+                    state, info = client.wait_for_import(
+                        guid, timeout_s=cfg.poll_timeout_s, interval_s=cfg.poll_interval_s
+                    )
+                    results.append({**base, "import_guid": guid, "state": state or "UNKNOWN", "state_info": info or ""})
+                except UserException as e:
+                    results.append({**base, "import_guid": guid, "state": "SUBMIT_FAILED", "state_info": str(e)})
+        failed = [r for r in results if r["state"] in ("ERROR", "SUBMIT_FAILED")]
+        return results, failed
 
     def _write_results(self, results: list[dict]):
         # Append-only audit log: every run's attempts accumulate (write_always keeps them even on a
@@ -230,17 +250,29 @@ class Component(ComponentBase):
     def list_agendas(self) -> list[SelectElement]:
         return [SelectElement(value=a["value"], label=a["label"]) for a in self.client.list_agendas()]
 
+    @staticmethod
+    def _api_fields(fields: list[dict]) -> list[dict]:
+        # Only scalar (non-list) fields are mappable; label == field_name so the dropdown shows the
+        # real Money S3 API field name.
+        return [{"field_name": f["field_name"], "label": f["field_name"]} for f in fields if not f["is_list"]]
+
+    @staticmethod
+    def _prefill(columns: list[str], field_names: list[str], existing: list) -> list[dict]:
+        # Keep any mapping the user already set; fuzzy-match the rest against the API field names.
+        kept = {fm.source_column: fm.destination_field for fm in existing}
+        return [
+            {"source_column": col, "destination_field": kept.get(col) or fuzzy_match(col, field_names)}
+            for col in columns
+        ]
+
     @sync_action("load_field_mapping")
     def load_field_mapping(self) -> dict:
         cfg = self.config
         if not cfg.endpoint:
             raise UserException("Please select an endpoint first.")
         tables = self.configuration.tables_input_mapping
-        if len(tables) != 1:
-            raise UserException(f"Exactly one input table must be mapped. Found: {len(tables)}.")
-        columns = tables[0].columns or []
-        if not columns:
-            raise UserException("Input table has no column list; select columns in the input mapping.")
+        if not tables:
+            raise UserException("Map at least one input table first, then re-load the mapping.")
 
         client = self.client
         try:
@@ -250,16 +282,37 @@ class Component(ComponentBase):
             # endpoints expose only create<Endpoint>; fall back so "Re-load mapping" works in Update
             # mode too. The actual run still resolves the real write-mode mutation.
             _name, _arg, input_type = client.resolve_mutation(cfg.endpoint, "create")
-        fields = client.get_input_fields(input_type.rstrip("!"))
-        # label == field_name so the dropdown shows the real Money S3 API field name.
-        api_fields = [{"field_name": f["field_name"], "label": f["field_name"]} for f in fields if not f["is_list"]]
-        field_names = [f["field_name"] for f in api_fields]
-        existing = {fm.source_column: fm.destination_field for fm in cfg.field_mapping}
-        field_mapping = [
-            {"source_column": col, "destination_field": existing.get(col) or fuzzy_match(col, field_names)}
-            for col in columns
-        ]
-        return {"type": "data", "data": {"field_mapping": field_mapping, "_metadata_": {"api_fields": api_fields}}}
+        header_fields = client.get_input_fields(input_type.rstrip("!"))
+        api_fields = self._api_fields(header_fields)
+
+        # Document endpoints expose a line-item collection; surface its fields so the lines mapping
+        # gets the same assisted dropdown (and prefill) as the header mapping.
+        items_field, element_type = self._line_item_field(header_fields)
+        line_api_fields = self._api_fields(client.get_input_fields(element_type)) if items_field else []
+
+        # Split the mapped tables into header vs lines (the lines table is the one named in cfg).
+        lines_tbl = next((t for t in tables if cfg.lines_table and t.destination == cfg.lines_table), None)
+        header_tbl = next((t for t in tables if t is not lines_tbl), None)
+        if header_tbl is None or not (header_tbl.columns or []):
+            raise UserException("The header input table has no columns; select its columns in the input mapping.")
+
+        data = {
+            "field_mapping": self._prefill(
+                header_tbl.columns, [f["field_name"] for f in api_fields], cfg.field_mapping
+            ),
+            "_metadata_": {"api_fields": api_fields, "line_api_fields": line_api_fields},
+        }
+        if lines_tbl is not None:
+            # Echo the user's current line settings so the nested object isn't clobbered, plus the
+            # prefilled line mapping.
+            data["line_items"] = {
+                "lines_table": cfg.lines_table,
+                "lines_join_key": cfg.lines_join_key,
+                "lines_field_mapping": self._prefill(
+                    lines_tbl.columns or [], [f["field_name"] for f in line_api_fields], cfg.lines_field_mapping
+                ),
+            }
+        return {"type": "data", "data": data}
 
 
 if __name__ == "__main__":

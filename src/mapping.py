@@ -22,7 +22,15 @@ def coerce_value(raw, gql_type: str):
     if gql_type == "Int":
         return int(raw)
     if gql_type == "Decimal":
-        return float(raw)
+        s = str(raw).strip()
+        # Czech/European exports may use a comma decimal separator ("1234,56"); normalize it when no
+        # dot is present (a value with both is locale-ambiguous, so we leave it to fail fast).
+        if "," in s and "." not in s:
+            s = s.replace(",", ".")
+        # Money S3's Decimal scalar accepts only a numeric literal (a string is rejected), so we emit
+        # a number. Values are passed straight through with no arithmetic, and json.dumps writes the
+        # shortest round-tripping literal, so float preserves them exactly for realistic amounts.
+        return float(s)
     return raw  # String, Date, UUID, enums pass through as-is
 
 

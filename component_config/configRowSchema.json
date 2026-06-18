@@ -106,7 +106,6 @@
       "description": "Shown only for document endpoints that have a line-item collection (invoices, orders, delivery notes, etc.).",
       "propertyOrder": 60,
       "options": {
-        "collapsed": true,
         "dependencies": {
           "endpoint": [
             "CashVoucher",
@@ -163,7 +162,7 @@
           "type": "array",
           "title": "Lines Field Mapping",
           "format": "table",
-          "description": "Field mapping for line items. Enter the Money S3 API field name for each line column (e.g. description, amount, unitPrice).",
+          "description": "Field mapping for line items. Pick the Money S3 API field for each line column (or type one); run Re-load mapping to prefill.",
           "propertyOrder": 30,
           "items": {
             "type": "object",
@@ -181,12 +180,35 @@
               },
               "destination_field": {
                 "type": "string",
-                "title": "Destination Field"
+                "title": "Destination Field",
+                "format": "select",
+                "watch": {
+                  "line_api_fields": "_metadata_.line_api_fields"
+                },
+                "enumSource": [
+                  {
+                    "source": "line_api_fields",
+                    "value": "{{item.field_name}}",
+                    "title": "{{item.label}}"
+                  }
+                ],
+                "options": {
+                  "tags": true
+                }
               }
             }
           }
         }
       }
+    },
+    "batch_size": {
+      "type": "integer",
+      "title": "Batch Size",
+      "default": 100,
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of records submitted before their import states are polled. A larger batch lets the agenda's async imports overlap (faster for big tables); a smaller batch confirms records sooner.",
+      "propertyOrder": 90
     },
     "poll_timeout_s": {
       "type": "integer",
@@ -219,6 +241,12 @@
       },
       "properties": {
         "api_fields": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "line_api_fields": {
           "type": "array",
           "items": {
             "type": "object"

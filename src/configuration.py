@@ -1,4 +1,3 @@
-import logging
 from typing import Literal
 
 from keboola.component.exceptions import UserException
@@ -29,12 +28,16 @@ class WriterConfiguration(BaseModel):
     lines_table: str | None = None
     lines_join_key: list[str] = Field(default_factory=list)
     lines_field_mapping: list[FieldMapping] = Field(default_factory=list)
+    # Records submitted per batch: a batch is created first, then polled for its import state, so the
+    # agenda's async imports overlap instead of being confirmed strictly one-by-one.
     batch_size: int = 100
     poll_timeout_s: int = (
         30  # max seconds to poll importStatus for a terminal state (0 = submit and report immediately)
     )
     poll_interval_s: int = 2
     continue_on_error: bool = False
+    # Declared for config transparency; the actual debug log level is applied by keboola.component
+    # (ComponentBase reads the platform 'debug' parameter), so there is no manual handling here.
     debug: bool = False
 
     def __init__(self, **data):
@@ -49,5 +52,3 @@ class WriterConfiguration(BaseModel):
         except ValidationError as e:
             msgs = [f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in e.errors()]
             raise UserException(f"Configuration error: {', '.join(msgs)}") from None
-        if self.debug:
-            logging.getLogger().setLevel(logging.DEBUG)

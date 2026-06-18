@@ -80,6 +80,22 @@ def test_run_submits_each_row_and_writes_results(tmp_path, monkeypatch):
     assert all(r["state"] == "OK" for r in rows)
 
 
+def test_batch_size_submits_whole_batch_before_polling(tmp_path, monkeypatch):
+    # batch_size=2 over 3 rows: each batch submits all its records, then polls them, so async imports
+    # overlap. Call order must be submit,submit,poll,poll (batch 1) then submit,poll (batch 2).
+    calls = []
+    fake = MagicMock()
+    fake.resolve_mutation.return_value = ("createCompany", "company", "CompanyInput!")
+    fake.get_input_fields.return_value = [{"field_name": "businessName", "type": "String", "is_list": False}]
+    fake.submit.side_effect = lambda *a, **k: calls.append("submit") or "G"
+    fake.wait_for_import.side_effect = lambda *a, **k: (calls.append("poll"), ("OK", ""))[1]
+    comp, _ = _setup(
+        tmp_path, monkeypatch, _base_params(batch_size=2), [{"name": "A"}, {"name": "B"}, {"name": "C"}], fake
+    )
+    comp.run()
+    assert calls == ["submit", "submit", "poll", "poll", "submit", "poll"]
+
+
 def test_error_state_fails_job_when_not_continue(tmp_path, monkeypatch):
     fake = _fake_company(submit="G1", wait=("ERROR", "insufficient data"))
     comp, _ = _setup(tmp_path, monkeypatch, _base_params(continue_on_error=False), [{"name": "ACME"}], fake)

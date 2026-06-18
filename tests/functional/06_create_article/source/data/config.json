@@ -22,7 +22,8 @@
         "source_column": "unit",
         "destination_field": "mainMeasureUnit"
       }
-    ]
+    ],
+    "batch_size": 1
   },
   "image_parameters": {
     "app_id": "DUMMY_APP_ID"

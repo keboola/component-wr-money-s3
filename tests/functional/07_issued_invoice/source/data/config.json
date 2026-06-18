@@ -40,7 +40,8 @@
         "source_column": "unit_price",
         "destination_field": "unitPrice"
       }
-    ]
+    ],
+    "batch_size": 1
   },
   "image_parameters": {
     "app_id": "DUMMY_APP_ID"
