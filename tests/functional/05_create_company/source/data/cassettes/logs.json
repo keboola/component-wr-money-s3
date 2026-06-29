@@ -1,0 +1,12 @@
+{
+    "exit_code": null,
+    "stderr": "",
+    "logs": [
+        {
+            "level": "INFO",
+            "logger": "root",
+            "message": "Submitted 5 record(s) to Money S3 endpoint 'Company'; 0 failed, 5 unconfirmed (import still non-terminal within the poll window \u2014 see write_log for final state).",
+            "timestamp": "2026-06-08T17:32:55.000Z"
+        }
+    ]
+}

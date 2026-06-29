@@ -1,0 +1,6 @@
+row_index,endpoint,write_mode,key_value,submitted_at,import_guid,state,state_info
+0,Company,create,,2026-06-08T17:32:55+00:00,2bad38dc-9cd9-4a19-bdc3-bf5faac8e8e9,UNPROCESSED,
+1,Company,create,,2026-06-08T17:32:55+00:00,6dff12dc-efe8-4111-9baa-1e2805749cce,UNPROCESSED,
+2,Company,create,,2026-06-08T17:32:55+00:00,381aec23-8c4f-4f33-9a47-b715b6f65b48,UNPROCESSED,
+3,Company,create,,2026-06-08T17:32:55+00:00,d9c242d2-31ad-48f3-b1fe-24e626cf3ce5,UNPROCESSED,
+4,Company,create,,2026-06-08T17:32:55+00:00,50c90f7f-dc19-4677-823d-912606fa2a1b,UNPROCESSED,

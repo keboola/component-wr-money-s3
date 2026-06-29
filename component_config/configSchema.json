@@ -1,19 +1,47 @@
 {
   "type": "object",
-  "title": "extractor configuration",
+  "title": "Money S3 Connection",
   "required": [
-    "print_hello"
+    "base_url",
+    "client_id",
+    "#client_secret"
   ],
   "properties": {
-    "print_hello": {
-      "type": "boolean",
-      "title": "Print Hello",
+    "base_url": {
+      "type": "string",
+      "title": "Base URL",
+      "description": "Money S3 API base URL, e.g. https://{domain}.api.moneys3.eu",
       "propertyOrder": 1
     },
-    "debug": {
-      "type": "boolean",
-      "title": "Debug",
-      "propertyOrder": 2
+    "client_id": {
+      "type": "string",
+      "title": "Client ID",
+      "propertyOrder": 3
+    },
+    "#client_secret": {
+      "type": "string",
+      "title": "Client Secret",
+      "format": "password",
+      "propertyOrder": 4
+    },
+    "agenda_id": {
+      "type": "string",
+      "title": "Agenda",
+      "format": "select",
+      "enum": [],
+      "description": "Target Money S3 agenda (company database). Required to write data; use 'Re-load agendas' after testing the connection.",
+      "propertyOrder": 6,
+      "options": {
+        "async": {
+          "label": "Re-load agendas",
+          "action": "list_agendas"
+        }
+      }
+    },
+    "test_connection": {
+      "type": "button",
+      "format": "test-connection",
+      "propertyOrder": 7
     }
   }
 }

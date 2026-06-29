@@ -1,26 +1,54 @@
-import logging
+from typing import Literal
 
 from keboola.component.exceptions import UserException
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
-class Configuration(BaseModel):
-    print_hello: bool
-    api_token: str = Field(alias="#api_token")
+class FieldMapping(BaseModel):
+    source_column: str
+    destination_field: str = ""
+
+
+class WriterConfiguration(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    # connection (config-level)
+    # NOTE: app_id is NOT here — it is a component-level image parameter (set in the Developer
+    # Portal), read in Component._build_client, and is intentionally not user-configurable.
+    base_url: str
+    client_id: str
+    client_secret: str = Field(alias="#client_secret")
+    agenda_id: str | None = None  # GUID of the target Money S3 agenda (company DB); required for writes
+
+    # row-level
+    endpoint: str | None = None
+    write_mode: Literal["create", "update"] = "create"
+    key_field: str = "guid"
+    field_mapping: list[FieldMapping] = Field(default_factory=list)
+    lines_table: str | None = None
+    lines_join_key: list[str] = Field(default_factory=list)
+    lines_field_mapping: list[FieldMapping] = Field(default_factory=list)
+    # Records submitted per batch: a batch is created first, then polled for its import state, so the
+    # agenda's async imports overlap instead of being confirmed strictly one-by-one.
+    batch_size: int = 100
+    poll_timeout_s: int = (
+        30  # max seconds to poll importStatus for a terminal state (0 = submit and report immediately)
+    )
+    poll_interval_s: int = 2
+    continue_on_error: bool = False
+    # Declared for config transparency; the actual debug log level is applied by keboola.component
+    # (ComponentBase reads the platform 'debug' parameter), so there is no manual handling here.
     debug: bool = False
 
     def __init__(self, **data):
+        nested = data.pop("line_items", None)
+        if nested:
+            for key in ("lines_table", "lines_join_key", "lines_field_mapping"):
+                value = nested.get(key)
+                if value not in (None, "", []):
+                    data[key] = value
         try:
             super().__init__(**data)
         except ValidationError as e:
-            error_messages = [f"{err['loc'][0]}: {err['msg']}" for err in e.errors()]
-            raise UserException(f"Validation Error: {', '.join(error_messages)}")
-
-        if self.debug:
-            logging.debug("Component will run in Debug mode")
-
-    @field_validator("api_token")
-    def token_must_be_uppercase(cls, v):
-        if not v.isupper():
-            raise UserException("API token must be uppercase")
-        return v
+            msgs = [f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in e.errors()]
+            raise UserException(f"Configuration error: {', '.join(msgs)}") from None

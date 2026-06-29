@@ -1,0 +1,12 @@
+{
+  "exit_code": 1,
+  "stderr": "No 'endpoint' selected for this row.\nTraceback (most recent call last):\n  File \"src/component.py\", line 264, in <module>\n    Component().execute_action()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/Users/josefkudera/CF/components/component-money-s3-writer/.venv/lib/python3.14/site-packages/keboola/component/base.py\", line 251, in execute_action\n    return self._do_execute_action()\n           ~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/Users/josefkudera/CF/components/component-money-s3-writer/.venv/lib/python3.14/site-packages/keboola/component/base.py\", line 265, in _do_execute_action\n    return action_method()\n  File \"src/component.py\", line 63, in run\n    raise UserException(\"No 'endpoint' selected for this row.\")\nkeboola.component.exceptions.UserException: No 'endpoint' selected for this row.\n",
+  "logs": [
+    {
+      "level": "ERROR",
+      "logger": "root",
+      "message": "No 'endpoint' selected for this row.\nTraceback (most recent call last):\n  File \"src/component.py\", line 264, in <module>\n    Component().execute_action()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/Users/josefkudera/CF/components/component-money-s3-writer/.venv/lib/python3.14/site-packages/keboola/component/base.py\", line 251, in execute_action\n    return self._do_execute_action()\n           ~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/Users/josefkudera/CF/components/component-money-s3-writer/.venv/lib/python3.14/site-packages/keboola/component/base.py\", line 265, in _do_execute_action\n    return action_method()\n  File \"src/component.py\", line 63, in run\n    raise UserException(\"No 'endpoint' selected for this row.\")\nkeboola.component.exceptions.UserException: No 'endpoint' selected for this row.",
+      "timestamp": "2026-06-08T14:03:02.000Z"
+    }
+  ]
+}

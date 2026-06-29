@@ -1,1 +1,258 @@
-{}
+{
+  "type": "object",
+  "title": "Row Configuration",
+  "properties": {
+    "endpoint": {
+      "type": "string",
+      "title": "Endpoint",
+      "format": "select",
+      "enum": [],
+      "description": "The Money S3 object to write to (e.g. Company, IssuedInvoice).",
+      "propertyOrder": 10,
+      "options": {
+        "async": {
+          "label": "Re-load endpoints",
+          "action": "list_endpoints"
+        }
+      }
+    },
+    "write_mode": {
+      "type": "string",
+      "title": "Write Mode",
+      "format": "select",
+      "enum": [
+        "create",
+        "update"
+      ],
+      "default": "create",
+      "propertyOrder": 20,
+      "options": {
+        "enum_titles": [
+          "Create",
+          "Update"
+        ]
+      }
+    },
+    "key_field": {
+      "type": "string",
+      "title": "Key Field",
+      "default": "guid",
+      "description": "Source column whose value is recorded in the write_log output (key_value) for traceability. Note: this does NOT drive update matching — to match existing records on update, map the identifier column in Field Mapping.",
+      "propertyOrder": 30,
+      "options": {
+        "dependencies": {
+          "write_mode": "update"
+        }
+      }
+    },
+    "field_mapping": {
+      "type": "array",
+      "title": "Field Mapping",
+      "format": "table",
+      "propertyOrder": 40,
+      "items": {
+        "type": "object",
+        "required": [
+          "source_column",
+          "destination_field"
+        ],
+        "properties": {
+          "source_column": {
+            "type": "string",
+            "title": "Source Column",
+            "options": {
+              "readOnly": true
+            }
+          },
+          "destination_field": {
+            "type": "string",
+            "title": "Destination Field",
+            "format": "select",
+            "watch": {
+              "api_fields": "_metadata_.api_fields"
+            },
+            "enumSource": [
+              {
+                "source": "api_fields",
+                "value": "{{item.field_name}}",
+                "title": "{{item.label}}"
+              }
+            ],
+            "options": {
+              "tags": true
+            }
+          }
+        }
+      }
+    },
+    "load_mapping": {
+      "type": "button",
+      "format": "sync-action",
+      "propertyOrder": 50,
+      "options": {
+        "async": {
+          "label": "Re-load mapping",
+          "action": "load_field_mapping",
+          "autoload": [
+            "endpoint"
+          ],
+          "cache": false
+        }
+      }
+    },
+    "line_items": {
+      "type": "object",
+      "title": "Line Items (Optional)",
+      "description": "Shown only for document endpoints that have a line-item collection (invoices, orders, delivery notes, etc.).",
+      "propertyOrder": 60,
+      "options": {
+        "dependencies": {
+          "endpoint": [
+            "CashVoucher",
+            "IssuedDeliveryNote",
+            "IssuedInquiry",
+            "IssuedInvoice",
+            "IssuedOffer",
+            "IssuedOrder",
+            "IssuedSlip",
+            "ReceivedDeliveryNote",
+            "ReceivedInquiry",
+            "ReceivedInvoice",
+            "ReceivedOffer",
+            "ReceivedOrder",
+            "ReceivedSlip",
+            "SaleSlip",
+            "StockTakingDocument",
+            "TransferNote"
+          ]
+        }
+      },
+      "properties": {
+        "lines_table": {
+          "type": "string",
+          "title": "Lines Table (destination filename)",
+          "description": "Destination filename of the second input table that contains line items. Required for document mode (e.g. invoices with line rows).",
+          "propertyOrder": 10
+        },
+        "lines_join_key": {
+          "type": "array",
+          "title": "Lines Join Key(s)",
+          "description": "Header column(s) that link each header row to its line rows; must also exist in the lines table. Pick from the header's mapped columns or type names. Add more than one for a composite join key.",
+          "format": "select",
+          "uniqueItems": true,
+          "propertyOrder": 20,
+          "items": {
+            "type": "string"
+          },
+          "watch": {
+            "header_columns": "field_mapping"
+          },
+          "enumSource": [
+            {
+              "source": "header_columns",
+              "value": "{{item.source_column}}",
+              "title": "{{item.source_column}}"
+            }
+          ],
+          "options": {
+            "creatable": true
+          }
+        },
+        "lines_field_mapping": {
+          "type": "array",
+          "title": "Lines Field Mapping",
+          "format": "table",
+          "description": "Field mapping for line items. Pick the Money S3 API field for each line column (or type one); run Re-load mapping to prefill.",
+          "propertyOrder": 30,
+          "items": {
+            "type": "object",
+            "required": [
+              "source_column",
+              "destination_field"
+            ],
+            "properties": {
+              "source_column": {
+                "type": "string",
+                "title": "Source Column",
+                "options": {
+                  "readOnly": true
+                }
+              },
+              "destination_field": {
+                "type": "string",
+                "title": "Destination Field",
+                "format": "select",
+                "watch": {
+                  "line_api_fields": "_metadata_.line_api_fields"
+                },
+                "enumSource": [
+                  {
+                    "source": "line_api_fields",
+                    "value": "{{item.field_name}}",
+                    "title": "{{item.label}}"
+                  }
+                ],
+                "options": {
+                  "tags": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "batch_size": {
+      "type": "integer",
+      "title": "Batch Size",
+      "default": 100,
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of records submitted before their import states are polled. A larger batch lets the agenda's async imports overlap (faster for big tables); a smaller batch confirms records sooner.",
+      "propertyOrder": 90
+    },
+    "poll_timeout_s": {
+      "type": "integer",
+      "title": "Import Confirmation Timeout (s)",
+      "default": 30,
+      "minimum": 0,
+      "description": "Seconds to poll Money S3 for each record's final import state. Set to 0 to submit and report immediately — the agenda's S3 Automatic processes the import queue asynchronously.",
+      "propertyOrder": 95
+    },
+    "continue_on_error": {
+      "type": "boolean",
+      "title": "Continue on Error",
+      "format": "checkbox",
+      "default": false,
+      "description": "When enabled, failed records are written to the write_log output table instead of failing the whole job.",
+      "propertyOrder": 100
+    },
+    "debug": {
+      "type": "boolean",
+      "title": "Debug",
+      "format": "checkbox",
+      "default": false,
+      "propertyOrder": 110
+    },
+    "_metadata_": {
+      "type": "object",
+      "propertyOrder": 120,
+      "options": {
+        "hidden": true
+      },
+      "properties": {
+        "api_fields": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "line_api_fields": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,3 @@
+# VCR cassettes and recorded outputs must stay byte-exact for deterministic replay.
+# (Keboola CSVs use CRLF per RFC 4180; disable git line-ending normalization here.)
+tests/functional/** -text
